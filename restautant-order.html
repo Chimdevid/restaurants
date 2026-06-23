@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ember — Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@100..700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0F0C09; --surface: #1A1510; --surface2: #241E17;
+    --border: rgba(255,255,255,0.08); --ember: #E8622A;
+    --ember-dim: rgba(232,98,42,0.15); --gold: #C9A84C;
+    --text: #F5EFE6; --muted: rgba(245,239,230,0.5);
+    --faint: rgba(245,239,230,0.15); --radius: 16px; --radius-sm: 10px;
+  }
+  html,body { height:100%; background:var(--bg); color:var(--text); font-family: "Kantumruy Pro", sans-serif; font-size:15px; line-height:1.5; }
+  #app { max-width:430px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative; overflow-x:hidden; }
+  .view { display:none; flex-direction:column; flex:1; }
+  .view.active { display:flex; }
+
+  /* ── Table picker screen ── */
+  .table-screen { align-items:center; justify-content:center; padding:40px 24px; text-align:center; }
+  .tp-flame { font-size:56px; margin-bottom:20px; }
+  .tp-title { font-family:'DM Serif Display',serif; font-size:28px; margin-bottom:6px; }
+  .tp-sub { font-size:13px; color:var(--muted); margin-bottom:32px; }
+  .tp-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; width:100%; max-width:320px; margin-bottom:28px; }
+  .tp-num {
+    aspect-ratio:1; border-radius:var(--radius-sm);
+    border:0.5px solid var(--border); background:var(--surface);
+    color:var(--text); font-size:17px; font-weight:600;
+    cursor:pointer; font-family: "Kantumruy Pro", sans-serif;
+    transition:all 0.15s; display:flex; align-items:center; justify-content:center;
+  }
+  .tp-num:active { background:var(--ember-dim); border-color:var(--ember); }
+  .tp-num.selected { background:var(--ember); border-color:var(--ember); color:#fff; }
+  .tp-confirm {
+    width:100%; max-width:320px;
+    background:var(--ember); color:#fff; border:none;
+    border-radius:var(--radius); padding:15px;
+    font-family: "Kantumruy Pro", sans-serif; font-size:15px; font-weight:600;
+    cursor:pointer; transition:opacity 0.15s;
+    opacity:0.4; pointer-events:none;
+  }
+  .tp-confirm.ready { opacity:1; pointer-events:auto; }
+  .tp-confirm:active { opacity:0.85; }
+
+  /* ── Header ── */
+  .app-header { padding:20px 20px 0; display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-family:'DM Serif Display',serif; font-size:26px; color:var(--text); letter-spacing:-0.5px; }
+  .logo em { color:var(--ember); font-style:italic; }
+  .table-badge {
+    font-size:12px; font-weight:600; color:var(--gold);
+    background:rgba(201,168,76,0.12); border:0.5px solid rgba(201,168,76,0.3);
+    border-radius:99px; padding:4px 12px; letter-spacing:0.5px;
+    cursor:pointer; transition:background 0.15s;
+  }
+  .table-badge:hover { background:rgba(201,168,76,0.22); }
+  .table-badge::after { content:' ✎'; font-size:10px; opacity:0.6; }
+
+  /* ── Rest of menu ── */
+  .hero-strip { margin:20px 20px 0; background:var(--surface); border-radius:var(--radius); border:0.5px solid var(--border); padding:18px; display:flex; align-items:center; gap:14px; }
+  .hero-flame { font-size:36px; line-height:1; }
+  .hero-text h2 { font-family:'DM Serif Display',serif; font-size:18px; font-weight:400; }
+  .hero-text p { font-size:12px; color:var(--muted); margin-top:2px; }
+  .cat-scroll { display:flex; gap:8px; padding:18px 20px 0; overflow-x:auto; scrollbar-width:none; }
+  .cat-scroll::-webkit-scrollbar { display:none; }
+  .cat-btn { flex-shrink:0; padding:7px 16px; border-radius:99px; border:0.5px solid var(--border); background:transparent; color:var(--muted); font-size:13px; font-weight:500; font-family: "Kantumruy Pro", sans-serif; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+  .cat-btn.active { background:var(--ember); border-color:var(--ember); color:#fff; }
+  .cat-btn:not(.active):hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
+  .menu-scroll { flex:1; overflow-y:auto; padding:16px 20px 120px; scrollbar-width:none; }
+  .menu-scroll::-webkit-scrollbar { display:none; }
+  .section-label { font-size:11px; font-weight:600; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin:10px 0 12px; }
+  .menu-item { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:10px; display:flex; align-items:center; gap:14px; transition:border-color 0.15s; }
+  .menu-item.in-cart { border-color:rgba(232,98,42,0.35); }
+  .item-emoji { font-size:36px; line-height:1; flex-shrink:0; }
+  .item-info { flex:1; min-width:0; }
+  .item-name { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .item-desc { font-size:12px; color:var(--muted); margin-top:2px; line-height:1.4; }
+  .item-price { font-family:'DM Serif Display',serif; font-size:15px; color:var(--gold); margin-top:4px; }
+  .item-ctrl { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .qty-btn { width:30px; height:30px; border-radius:50%; border:0.5px solid var(--border); background:var(--surface2); color:var(--text); font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.12s,border-color 0.12s; font-family: "Kantumruy Pro", sans-serif; }
+  .qty-btn:active { background:var(--ember-dim); border-color:var(--ember); }
+  .qty-btn.add-first { width:34px; height:34px; background:var(--ember); border-color:var(--ember); color:#fff; font-size:20px; }
+  .qty-num { font-size:15px; font-weight:600; min-width:16px; text-align:center; }
+  .cart-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; padding:12px 20px 24px; background:linear-gradient(to top,#0F0C09 70%,transparent); z-index:99; }
+  .cart-btn { width:100%; background:var(--ember); color:#fff; border:none; border-radius:var(--radius); padding:16px 20px; font-family: "Kantumruy Pro", sans-serif; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:opacity 0.15s; }
+  .cart-btn:active { opacity:0.85; }
+  .cart-btn-left { display:flex; align-items:center; gap:10px; }
+  .cart-count-badge { background:rgba(255,255,255,0.25); border-radius:99px; padding:2px 8px; font-size:12px; }
+  .cart-total { font-family:'DM Serif Display',serif; font-size:17px; }
+  .back-btn { background:var(--surface); border:0.5px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:8px 14px; font-family: "Kantumruy Pro", sans-serif; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .cart-header { padding:20px; }
+  .cart-title { font-family:'DM Serif Display',serif; font-size:24px; margin-top:14px; }
+  .cart-subtitle { font-size:13px; color:var(--muted); margin-top:4px; }
+  .cart-scroll { flex:1; overflow-y:auto; padding:0 20px; scrollbar-width:none; }
+  .cart-scroll::-webkit-scrollbar { display:none; }
+  .cart-line { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:0.5px solid var(--border); }
+  .cart-line-emoji { font-size:28px; flex-shrink:0; }
+  .cart-line-info { flex:1; }
+  .cart-line-name { font-weight:600; font-size:14px; }
+  .cart-line-price { font-size:13px; color:var(--muted); margin-top:2px; }
+  .cart-line-ctrl { display:flex; align-items:center; gap:8px; }
+  .summary-box { margin:16px 20px; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:16px; }
+  .summary-row { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:8px; }
+  .summary-row.total { font-size:16px; font-weight:600; color:var(--text); margin-bottom:0; padding-top:10px; border-top:0.5px solid var(--border); margin-top:6px; }
+  .summary-row.total span:last-child { font-family:'DM Serif Display',serif; color:var(--gold); font-size:18px; }
+  .note-wrap { margin:0 20px 16px; }
+  .note-label { font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+  .note-input { width:100%; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family: "Kantumruy Pro", sans-serif; font-size:13px; padding:10px 14px; resize:none; outline:none; height:64px; transition:border-color 0.15s; }
+  .note-input:focus { border-color:rgba(232,98,42,0.5); }
+  .note-input::placeholder { color:var(--faint); }
+  .order-btn { margin:0 20px 32px; width:calc(100% - 40px); background:var(--ember); color:#fff; border:none; border-radius:var(--radius); padding:16px; font-family: "Kantumruy Pro", sans-serif; font-size:15px; font-weight:600; cursor:pointer; transition:opacity 0.15s; }
+  .order-btn:active { opacity:0.85; }
+  .confirm-view { align-items:center; justify-content:center; text-align:center; padding:40px 30px; gap:0; }
+  .confirm-flame { font-size:72px; margin-bottom:24px; animation:pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  .confirm-title { font-family:'DM Serif Display',serif; font-size:30px; margin-bottom:12px; }
+  .confirm-sub { font-size:14px; color:var(--muted); line-height:1.6; max-width:260px; }
+  .confirm-order-num { margin:28px 0; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:20px 28px; width:100%; max-width:240px; }
+  .con-label { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .con-num { font-family:'DM Serif Display',serif; font-size:40px; color:var(--gold); margin-top:4px; }
+  .eta-row { display:flex; gap:10px; margin-top:0; width:100%; max-width:280px; }
+  .eta-card { flex:1; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:14px 10px; text-align:center; }
+  .eta-icon { font-size:22px; margin-bottom:4px; }
+  .eta-val { font-size:15px; font-weight:600; }
+  .eta-lbl { font-size:11px; color:var(--muted); margin-top:2px; }
+  .new-order-btn { margin-top:32px; background:transparent; border:0.5px solid var(--border); color:var(--muted); border-radius:var(--radius); padding:12px 24px; font-family: "Kantumruy Pro", sans-serif; font-size:14px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ TABLE PICKER VIEW ══ -->
+  <div class="view active table-screen" id="view-table">
+    <div class="tp-flame">🔥</div>
+    <div class="tp-title">Welcome To order</div>
+    <div class="tp-sub">សូមជ្រើរើសលេខតុរបស់អ្នក</div>
+    <div class="tp-grid" id="tableGrid"></div>
+    <button class="tp-confirm" id="tpConfirm" onclick="confirmTable()">Start ordering</button>
+  </div>
+
+  <!-- ══ MENU VIEW ══ -->
+  <div class="view" id="view-menu">
+    <div class="app-header">
+      <div class="logo"><em>De</em>Vit_restaurants</div>
+      <div class="table-badge" id="tableBadge" onclick="changeTable()">Table –</div>
+    </div>
+    <div class="hero-strip">
+      <div class="hero-flame">🔥</div>
+      <div class="hero-text">
+        <h2>សូមស្វាគមន៍</h2>
+        <p>Kitchen open · Est. wait 12–18 min</p>
+      </div>
+    </div>
+    <div class="cat-scroll" id="catTabs"></div>
+    <div class="menu-scroll" id="menuList"></div>
+  </div>
+
+  <!-- ══ CART VIEW ══ -->
+  <div class="view" id="view-cart">
+    <div class="cart-header">
+      <button class="back-btn" onclick="showView('menu')">← Back</button>
+      <div class="cart-title">Your order</div>
+      <div class="cart-subtitle" id="cartSubtitle"></div>
+    </div>
+    <div class="cart-scroll" id="cartLines"></div>
+    <div class="summary-box" id="summaryBox"></div>
+    <div class="note-wrap">
+      <div class="note-label">Notes for the kitchen</div>
+      <textarea class="note-input" id="noteInput" placeholder="Allergies, preferences, special requests…"></textarea>
+    </div>
+    <button class="order-btn" onclick="placeOrder()">Place order</button>
+  </div>
+
+  <!-- ══ CONFIRM VIEW ══ -->
+  <div class="view confirm-view" id="view-confirm">
+    <div class="confirm-flame">🔥</div>
+    <div class="confirm-title">Order placed!</div>
+    <div class="confirm-sub">Your dishes are on their way from the kitchen. Sit back and relax.</div>
+    <div class="confirm-order-num">
+      <div class="con-label">Order no.</div>
+      <div class="con-num" id="orderNum">#–</div>
+    </div>
+    <div class="eta-row">
+      <div class="eta-card"><div class="eta-icon">⏱</div><div class="eta-val">15 min</div><div class="eta-lbl">Est. time</div></div>
+      <div class="eta-card"><div class="eta-icon">🍽</div><div class="eta-val" id="confirmItems">–</div><div class="eta-lbl">Items</div></div>
+      <div class="eta-card"><div class="eta-icon">💰</div><div class="eta-val" id="confirmTotal">–</div><div class="eta-lbl">Total</div></div>
+    </div>
+    <button class="new-order-btn" onclick="resetOrder()">Start a new order</button>
+  </div>
+
+  <!-- ══ FLOATING CART BAR ══ -->
+  <div class="cart-bar" id="cartBar" style="display:none">
+    <button class="cart-btn" onclick="showView('cart')">
+      <div class="cart-btn-left">
+        <span class="cart-count-badge" id="cartCountBadge">0</span>
+        View order
+      </div>
+      <span class="cart-total" id="cartTotalBar">$0.00</span>
+    </button>
+  </div>
+
+</div>
+<script>
+const MENU = [
+  {id:1,cat:'Starters',emoji:'🥗',name:'Roasted beet salad',desc:'Goat cheese, candied walnuts, citrus dressing',price:12},
+  {id:2,cat:'Starters',emoji:'🦐',name:'Crispy tiger prawns',desc:'Chilli lime butter, micro herbs',price:16},
+  {id:3,cat:'Starters',emoji:'🍞',name:'Sourdough & whipped butter',desc:'House-baked, sea salt flakes',price:7},
+  {id:4,cat:'Mains',emoji:'🥩',name:'Dry-aged ribeye 300g',desc:'Chimichurri, bone marrow butter, fries',price:42},
+  {id:5,cat:'Mains',emoji:'🐟',name:'Pan-seared sea bass',desc:'Saffron beurre blanc, braised fennel',price:34},
+  {id:6,cat:'Mains',emoji:'🍝',name:'Pappardelle al ragù',desc:'Slow-cooked beef, parmigiano, basil oil',price:26},
+  {id:7,cat:'Mains',emoji:'🥦',name:'Roasted cauliflower steak',desc:'Harissa yoghurt, pomegranate, pine nuts',price:22},
+  {id:8,cat:'Desserts',emoji:'🍫',name:'Valrhona chocolate tart',desc:'Raspberry coulis, crème fraîche',price:11},
+  {id:9,cat:'Desserts',emoji:'🍨',name:'Burnt honey ice cream',desc:'Three scoops, sesame brittle',price:9},
+  {id:10,cat:'Drinks',emoji:'🍷',name:'House red — Malbec',desc:'Mendoza, Argentina · glass',price:10},
+  {id:11,cat:'Drinks',emoji:'🥂',name:'Sparkling water 750ml',desc:'San Pellegrino',price:5},
+  {id:12,cat:'Drinks',emoji:'🍹',name:'Ember cocktail',desc:'Mezcal, smoked chilli, blood orange',price:14},
+];
+
+const TOTAL_TABLES = 16;
+const CATS = ['All',...new Set(MENU.map(i=>i.cat))];
+let activeCat='All', cart={}, selectedTable=null, currentTable=null;
+
+/* ── localStorage ── */
+function getOrders(){ try{ return JSON.parse(localStorage.getItem('ember_orders')||'[]'); }catch(e){ return []; } }
+function saveOrders(o){ localStorage.setItem('ember_orders',JSON.stringify(o)); }
+
+/* ── Table picker ── */
+function buildTableGrid(){
+  const grid = document.getElementById('tableGrid');
+  let html='';
+  for(let i=1;i<=TOTAL_TABLES;i++){
+    html+=`<button class="tp-num" id="tp-${i}" onclick="selectTable(${i})">${i}</button>`;
+  }
+  grid.innerHTML=html;
+}
+
+function selectTable(n){
+  document.querySelectorAll('.tp-num').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('tp-'+n).classList.add('selected');
+  selectedTable=n;
+  const btn=document.getElementById('tpConfirm');
+  btn.classList.add('ready');
+  btn.textContent=`Order for Table ${n}`;
+}
+
+function confirmTable(){
+  if(!selectedTable) return;
+  currentTable=selectedTable;
+  document.getElementById('tableBadge').textContent=`Table ${currentTable}`;
+  showView('menu');
+}
+
+function changeTable(){
+  // Reset picker selection to current table
+  selectedTable=currentTable;
+  document.querySelectorAll('.tp-num').forEach(b=>b.classList.remove('selected'));
+  if(currentTable) document.getElementById('tp-'+currentTable).classList.add('selected');
+  const btn=document.getElementById('tpConfirm');
+  btn.classList.add('ready');
+  btn.textContent=`Order for Table ${currentTable}`;
+  showView('table');
+}
+
+/* ── View router ── */
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(name==='cart') renderCart();
+  updateCartBar();
+}
+
+/* ── Category tabs ── */
+function renderCats(){
+  document.getElementById('catTabs').innerHTML=CATS.map(c=>`<button class="cat-btn${c===activeCat?' active':''}" onclick="selectCat('${c}')">${c}</button>`).join('');
+}
+function selectCat(c){ activeCat=c; renderCats(); renderMenu(); }
+
+/* ── Menu ── */
+function renderMenu(){
+  const items=activeCat==='All'?MENU:MENU.filter(i=>i.cat===activeCat);
+  const grouped={};
+  items.forEach(i=>{ (grouped[i.cat]=grouped[i.cat]||[]).push(i); });
+  let html='';
+  Object.entries(grouped).forEach(([cat,list])=>{
+    if(activeCat==='All') html+=`<div class="section-label">${cat}</div>`;
+    list.forEach(item=>{
+      const qty=cart[item.id]||0;
+      html+=`<div class="menu-item${qty>0?' in-cart':''}" id="mi-${item.id}">
+        <div class="item-emoji">${item.emoji}</div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-desc">${item.desc}</div>
+          <div class="item-price">$${item.price.toFixed(2)}</div>
+        </div>
+        <div class="item-ctrl">
+          ${qty===0
+            ?`<button class="qty-btn add-first" onclick="addItem(${item.id})">+</button>`
+            :`<button class="qty-btn" onclick="removeItem(${item.id})">−</button><span class="qty-num">${qty}</span><button class="qty-btn" onclick="addItem(${item.id})">+</button>`}
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('menuList').innerHTML=html;
+}
+
+function addItem(id){ cart[id]=(cart[id]||0)+1; renderMenu(); updateCartBar(); }
+function removeItem(id){ cart[id]=Math.max(0,(cart[id]||0)-1); if(!cart[id]) delete cart[id]; renderMenu(); updateCartBar(); }
+function cartCount(){ return Object.values(cart).reduce((a,b)=>a+b,0); }
+function cartTotal(){ return Object.entries(cart).reduce((s,[id,q])=>{ const it=MENU.find(i=>i.id===+id); return s+(it?it.price*q:0); },0); }
+
+function updateCartBar(){
+  const bar=document.getElementById('cartBar');
+  const count=cartCount();
+  const onMenu=document.getElementById('view-menu').classList.contains('active');
+  bar.style.display=(count>0&&onMenu)?'block':'none';
+  document.getElementById('cartCountBadge').textContent=count;
+  document.getElementById('cartTotalBar').textContent='$'+cartTotal().toFixed(2);
+}
+
+function renderCart(){
+  const tLabel=currentTable?`Table ${currentTable}`:'No table';
+  const entries=Object.entries(cart);
+  document.getElementById('cartSubtitle').textContent=(entries.length===1?'1 item':`${cartCount()} items`)+' · '+tLabel;
+  let lines='';
+  entries.forEach(([id,qty])=>{
+    const item=MENU.find(i=>i.id===+id); if(!item) return;
+    lines+=`<div class="cart-line">
+      <div class="cart-line-emoji">${item.emoji}</div>
+      <div class="cart-line-info"><div class="cart-line-name">${item.name}</div><div class="cart-line-price">$${(item.price*qty).toFixed(2)}</div></div>
+      <div class="cart-line-ctrl">
+        <button class="qty-btn" onclick="cartRemove(${item.id})">−</button>
+        <span class="qty-num">${qty}</span>
+        <button class="qty-btn" onclick="cartAdd(${item.id})">+</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('cartLines').innerHTML=lines;
+  const sub=cartTotal(), svc=sub*0.1, tot=sub+svc;
+  document.getElementById('summaryBox').innerHTML=`
+    <div class="summary-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
+    <div class="summary-row"><span>Service (10%)</span><span>$${svc.toFixed(2)}</span></div>
+    <div class="summary-row total"><span>Total</span><span>$${tot.toFixed(2)}</span></div>`;
+}
+
+function cartAdd(id){ addItem(id); renderCart(); }
+function cartRemove(id){ removeItem(id); if(cartCount()===0){ showView('menu'); return; } renderCart(); }
+
+function placeOrder(){
+  const total=cartTotal()*1.1;
+  const num='#'+Math.floor(1000+Math.random()*9000);
+  const count=cartCount();
+  const note=document.getElementById('noteInput').value.trim();
+  const orders=getOrders();
+  orders.unshift({
+    id:num,
+    table:'Table '+(currentTable||'?'),
+    time:new Date().toISOString(),
+    items:Object.entries(cart).map(([id,qty])=>{ const it=MENU.find(i=>i.id===+id); return {name:it.name,emoji:it.emoji,qty,price:it.price}; }),
+    note:note||'',
+    total:+total.toFixed(2),
+    status:'new'
+  });
+  saveOrders(orders);
+  document.getElementById('orderNum').textContent=num;
+  document.getElementById('confirmItems').textContent=count;
+  document.getElementById('confirmTotal').textContent='$'+total.toFixed(2);
+  showView('confirm');
+  document.getElementById('cartBar').style.display='none';
+}
+
+function resetOrder(){
+  cart={};
+  selectedTable=null; currentTable=null;
+  document.getElementById('noteInput').value='';
+  // Reset picker UI
+  document.querySelectorAll('.tp-num').forEach(b=>b.classList.remove('selected'));
+  const btn=document.getElementById('tpConfirm');
+  btn.classList.remove('ready');
+  btn.textContent='Start ordering';
+  renderMenu(); updateCartBar(); showView('table');
+}
+
+/* ── Init ── */
+buildTableGrid();
+renderCats();
+renderMenu();
+</script>
+</body>
+</html>

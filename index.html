@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ember — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F4F0; --surface: #FFFFFF; --surface2: #F0EDE8;
+    --border: rgba(0,0,0,0.08); --ember: #E8622A; --ember-light: #FDF0EB;
+    --gold: #9A6F1A; --gold-bg: #FDF6E3;
+    --text: #1A1208; --muted: rgba(26,18,8,0.5); --faint: rgba(26,18,8,0.1);
+    --green: #1A7A45; --green-bg: #EAF7EF;
+    --blue: #1A5AA0; --blue-bg: #EAF0FA;
+    --radius: 14px; --radius-sm: 9px;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.5; min-height: 100vh; }
+
+  /* ── Top bar ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; }
+  .logo em { color: var(--ember); font-style: italic; }
+  .logo span { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 8px; vertical-align: middle; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .live-dot { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--green); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: blink 1.8s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .clear-btn { font-size: 12px; font-weight: 500; color: var(--muted); background: transparent; border: 0.5px solid var(--border); border-radius: 99px; padding: 5px 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .clear-btn:hover { color: #c0392b; border-color: #c0392b; }
+
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 20px 24px 0; }
+  .stat-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .stat-num { font-family: 'DM Serif Display', serif; font-size: 28px; }
+  .stat-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .stat-card.highlight { background: var(--ember-light); border-color: rgba(232,98,42,0.2); }
+  .stat-card.highlight .stat-num { color: var(--ember); }
+
+  /* ── Filter tabs ── */
+  .filter-row { display: flex; gap: 8px; padding: 16px 24px 0; }
+  .filter-btn { padding: 6px 16px; border-radius: 99px; border: 0.5px solid var(--border); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .filter-btn.active { background: var(--ember); border-color: var(--ember); color: #fff; }
+  .filter-btn:not(.active):hover { border-color: rgba(0,0,0,0.2); color: var(--text); }
+
+  /* ── Orders grid ── */
+  .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; padding: 16px 24px 32px; }
+
+  .order-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.15s; }
+  .order-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .order-card.is-new { border-left: 3px solid var(--ember); }
+  .order-card.is-preparing { border-left: 3px solid #C9A84C; }
+  .order-card.is-ready { border-left: 3px solid var(--green); }
+  .order-card.is-done { border-left: 3px solid var(--faint); opacity: 0.6; }
+
+  .card-head { padding: 14px 16px 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-bottom: 0.5px solid var(--border); }
+  .card-head-left {}
+  .order-id { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
+  .order-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .status-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
+  .badge-new { background: var(--ember-light); color: var(--ember); }
+  .badge-preparing { background: var(--gold-bg); color: var(--gold); }
+  .badge-ready { background: var(--green-bg); color: var(--green); }
+  .badge-done { background: var(--faint); color: var(--muted); }
+
+  .card-items { padding: 10px 16px; }
+  .order-item-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; }
+  .order-item-row:not(:last-child) { border-bottom: 0.5px solid var(--faint); }
+  .oi-emoji { font-size: 18px; flex-shrink: 0; }
+  .oi-name { flex: 1; }
+  .oi-qty { font-weight: 600; color: var(--ember); font-size: 12px; background: var(--ember-light); border-radius: 99px; padding: 1px 8px; }
+
+  .card-note { margin: 0 16px 10px; background: var(--gold-bg); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; color: var(--gold); display: flex; gap: 6px; align-items: flex-start; }
+  .note-icon { flex-shrink: 0; }
+
+  .card-foot { padding: 10px 16px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 0.5px solid var(--border); }
+  .order-total { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--text); }
+  .action-btns { display: flex; gap: 6px; }
+  .act-btn { padding: 6px 14px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.12s; background: var(--surface); color: var(--text); }
+  .act-btn:active { transform: scale(0.97); }
+  .act-btn.primary { background: var(--ember); border-color: var(--ember); color: #fff; }
+  .act-btn.success { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+  /* ── Empty state ── */
+  .empty { padding: 60px 24px; text-align: center; }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 8px; }
+  .empty-sub { font-size: 14px; color: var(--muted); }
+
+  /* ── Time ago ── */
+  .time-ago { display: inline; }
+
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .orders-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <span class="logo"><em>E</em>mber</span>
+    <span class="logo"><span>Admin Dashboard</span></span>
+  </div>
+  <div class="topbar-right">
+    <div class="live-dot"><span class="dot"></span> Live</div>
+    <button class="clear-btn" onclick="clearAll()">Clear all done</button>
+  </div>
+</div>
+
+<div class="stats-row" id="statsRow"></div>
+
+<div class="filter-row">
+  <button class="filter-btn active" onclick="setFilter('all', this)">All orders</button>
+  <button class="filter-btn" onclick="setFilter('new', this)">🔴 New</button>
+  <button class="filter-btn" onclick="setFilter('preparing', this)">🟡 Preparing</button>
+  <button class="filter-btn" onclick="setFilter('ready', this)">🟢 Ready</button>
+  <button class="filter-btn" onclick="setFilter('done', this)">✓ Done</button>
+</div>
+
+<div class="orders-grid" id="ordersGrid"></div>
+
+<script>
+let currentFilter = 'all';
+
+function getOrders() {
+  try { return JSON.parse(localStorage.getItem('ember_orders') || '[]'); } catch(e) { return []; }
+}
+function saveOrders(o) { localStorage.setItem('ember_orders', JSON.stringify(o)); }
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'min ago';
+  return Math.floor(diff/3600) + 'h ago';
+}
+
+function statusLabel(s) {
+  const map = { new: 'New', preparing: 'Preparing', ready: 'Ready', done: 'Done' };
+  return map[s] || s;
+}
+function badgeClass(s) {
+  return { new:'badge-new', preparing:'badge-preparing', ready:'badge-ready', done:'badge-done' }[s] || 'badge-new';
+}
+function nextAction(s) {
+  if (s === 'new') return { label: 'Start preparing', next: 'preparing', cls: 'primary' };
+  if (s === 'preparing') return { label: 'Mark ready', next: 'ready', cls: 'success' };
+  if (s === 'ready') return { label: 'Mark done', next: 'done', cls: 'act-btn' };
+  return null;
+}
+
+function advance(id) {
+  const orders = getOrders();
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  const map = { new: 'preparing', preparing: 'ready', ready: 'done' };
+  if (map[o.status]) o.status = map[o.status];
+  saveOrders(orders);
+  render();
+}
+
+function clearAll() {
+  const orders = getOrders().filter(o => o.status !== 'done');
+  saveOrders(orders);
+  render();
+}
+
+function render() {
+  const allOrders = getOrders();
+  const filtered = currentFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentFilter);
+
+  // Stats
+  const counts = { new:0, preparing:0, ready:0, done:0 };
+  allOrders.forEach(o => counts[o.status] = (counts[o.status]||0) + 1);
+  const revenue = allOrders.filter(o=>o.status!=='done'||true).reduce((s,o)=>s+o.total,0);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card highlight">
+      <div class="stat-num">${counts.new||0}</div>
+      <div class="stat-lbl">New orders</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${counts.preparing||0}</div>
+      <div class="stat-lbl">Preparing</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${counts.ready||0}</div>
+      <div class="stat-lbl">Ready to serve</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">$${revenue.toFixed(0)}</div>
+      <div class="stat-lbl">Total revenue</div>
+    </div>`;
+
+  if (filtered.length === 0) {
+    document.getElementById('ordersGrid').innerHTML = `
+      <div class="empty" style="grid-column:1/-1">
+        <div class="empty-icon">🍽</div>
+        <div class="empty-title">No orders yet</div>
+        <div class="empty-sub">Orders from customers will appear here in real time.</div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('ordersGrid').innerHTML = filtered.map(o => {
+    const act = nextAction(o.status);
+    const itemsHtml = o.items.map(it => `
+      <div class="order-item-row">
+        <span class="oi-emoji">${it.emoji}</span>
+        <span class="oi-name">${it.name}</span>
+        <span class="oi-qty">×${it.qty}</span>
+      </div>`).join('');
+    const noteHtml = o.note ? `
+      <div class="card-note">
+        <span class="note-icon">📝</span>
+        <span>${o.note}</span>
+      </div>` : '';
+    const actHtml = act ? `<button class="act-btn ${act.cls}" onclick="advance('${o.id}')">${act.label}</button>` : '';
+    return `
+      <div class="order-card is-${o.status}">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="order-id">${o.id}</div>
+            <div class="order-meta">${o.table} · <span class="time-ago">${timeAgo(o.time)}</span></div>
+          </div>
+          <span class="status-badge ${badgeClass(o.status)}">${statusLabel(o.status)}</span>
+        </div>
+        <div class="card-items">${itemsHtml}</div>
+        ${noteHtml}
+        <div class="card-foot">
+          <div class="order-total">$${o.total.toFixed(2)}</div>
+          <div class="action-btns">${actHtml}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Seed with demo orders so admin isn't empty on first open
+function seedDemo() {
+  const existing = getOrders();
+  if (existing.length > 0) return;
+  const demo = [
+    { id:'#4821', table:'Table 3', time: new Date(Date.now()-8*60000).toISOString(), items:[{emoji:'🥩',name:'Dry-aged ribeye 300g',qty:2,price:42},{emoji:'🍷',name:'House red — Malbec',qty:2,price:10}], note:'Medium rare please', total:118.80, status:'preparing' },
+    { id:'#4820', table:'Table 1', time: new Date(Date.now()-18*60000).toISOString(), items:[{emoji:'🥗',name:'Roasted beet salad',qty:1,price:12},{emoji:'🐟',name:'Pan-seared sea bass',qty:1,price:34},{emoji:'🥂',name:'Sparkling water 750ml',qty:2,price:5}], note:'', total:61.60, status:'ready' },
+    { id:'#4819', table:'Table 5', time: new Date(Date.now()-32*60000).toISOString(), items:[{emoji:'🍝',name:'Pappardelle al ragù',qty:2,price:26},{emoji:'🍹',name:'Ember cocktail',qty:2,price:14}], note:'No nuts', total:88.00, status:'done' },
+  ];
+  saveOrders(demo);
+}
+
+seedDemo();
+render();
+
+// Auto-refresh every 5 seconds to pick up new orders
+setInterval(render, 5000);
+</script>
+</body>
+</html>
